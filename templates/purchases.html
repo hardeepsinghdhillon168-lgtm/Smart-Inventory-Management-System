@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Purchases - Smart Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>body{background:linear-gradient(rgba(240,242,245,0.85),rgba(240,242,245,0.95)),url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1920&auto=format&fit=crop') no-repeat center center fixed;background-size:cover;} .sortable:hover{color: #198754;}</style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/dashboard"><i class="fas fa-boxes me-2"></i>Smart Inventory</a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a><a class="nav-link" href="/products">Products</a><a class="nav-link" href="/sales">Sales</a><a class="nav-link" href="/analytics">ML Analytics</a>
+                {% if role in ['SuperAdmin', 'Admin'] %}<a class="nav-link" href="/users">Users</a>{% endif %}
+                {% if role in ['SuperAdmin', 'Admin', 'Purchase'] %}<a class="nav-link" href="/suppliers">Suppliers</a>{% endif %}
+                <a class="nav-link active fw-bold" href="/purchases">Purchases</a>
+            </div>
+            <div class="d-flex align-items-center"><span class="badge bg-warning text-dark me-3">Role: {{ role }}</span><a href="/logout" class="btn btn-outline-light btn-sm">Logout</a></div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category if category != 'message' else 'success' }} shadow-sm">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4 bg-white p-3 rounded shadow-sm border-start border-5 border-success">
+            <h2 class="mb-0 text-dark fw-bold">Purchase Orders</h2>
+            <button class="btn btn-success fw-bold shadow" data-bs-toggle="modal" data-bs-target="#addPurchaseModal">+ Create PO</button>
+        </div>
+
+        <div class="card shadow-lg border-0">
+            <div class="card-body p-0">
+                <table class="table table-hover align-middle mb-0" id="poTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th class="ps-3 sortable" onclick="sortTable(0, 'poTable')" style="cursor:pointer;">PO ID <i class="fas fa-sort"></i></th>
+                            <th class="sortable" onclick="sortTable(1, 'poTable')" style="cursor:pointer;">Supplier <i class="fas fa-sort"></i></th>
+                            <th class="sortable" onclick="sortTable(2, 'poTable')" style="cursor:pointer;">Product <i class="fas fa-sort"></i></th>
+                            <th class="sortable" onclick="sortTable(3, 'poTable')" style="cursor:pointer;">Qty Added <i class="fas fa-sort"></i></th>
+                            <th class="sortable" onclick="sortTable(4, 'poTable')" style="cursor:pointer;">Unit Cost (₹) <i class="fas fa-sort"></i></th>
+                            <th class="sortable" onclick="sortTable(5, 'poTable')" style="cursor:pointer;">Total (₹) <i class="fas fa-sort"></i></th>
+                            <th>Date</th><th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in purchases %}
+                        <tr>
+                            <td class="ps-3">#PO-00{{ p.id }}</td>
+                            <td>{{ p.company if p.company else 'N/A' }}</td>
+                            <td><strong>{{ p.product_name if p.product_name else 'Deleted Product' }}</strong></td>
+                            <td class="text-success fw-bold">+{{ p.quantity }}</td>
+                            
+                            <td class="fw-bold text-muted">
+                                {% if p.quantity and p.quantity > 0 %}
+                                    {{ "%.2f"|format(p.total_cost / p.quantity) }}
+                                {% else %}
+                                    0.00
+                                {% endif %}
+                            </td>
+                            
+                            <td>{{ p.total_cost }}</td><td>{{ p.purchase_date }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning text-dark fw-bold shadow-sm" onclick="openEditPurchase('{{p.id}}', '{{p.quantity}}', '{{ (p.total_cost / p.quantity)|int if p.quantity else 0 }}')">Edit</button>
+                                <a href="/delete_purchase/{{ p.id }}" class="btn btn-sm btn-danger shadow-sm" onclick="return confirm('Delete this purchase? This will REMOVE items from current inventory.');">Delete</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center p-4 text-muted">No purchase orders found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addPurchaseModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Record Inbound Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form action="http://127.0.0.1:5000/purchases" method="POST">
+        <div class="modal-body"><div class="mb-3"><label>Select Supplier</label><select class="form-select" name="supplier_id" required>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.company }}</option>{% endfor %}</select></div><div class="mb-3"><label>Select Product</label><select class="form-select" name="product_id" required>{% for prod in products %}<option value="{{ prod.id }}">{{ prod.name }}</option>{% endfor %}</select></div>
+        <div class="row">
+            <div class="col-md-6 mb-3"><label>Qty Received</label><input type="number" class="form-control" name="quantity" id="add_qty" required min="1" onkeyup="calcTotalInvoice('add_qty', 'add_unit', 'add_total')"></div>
+            <div class="col-md-6 mb-3"><label>Item Value / Unit Cost (₹)</label><input type="number" step="0.01" class="form-control" id="add_unit" required onkeyup="calcTotalInvoice('add_qty', 'add_unit', 'add_total')"></div>
+        </div>
+        <div class="mb-3"><label>Calculated Total Invoice Cost (₹)</label><input type="number" step="0.01" class="form-control bg-light text-success fw-bold" name="total_cost" id="add_total" readonly placeholder="0.00"></div>
+        </div><div class="modal-footer"><button type="submit" class="btn btn-success fw-bold w-100">Confirm Purchase</button></div></form></div></div></div>
+
+    <div class="modal fade" id="editPurchaseModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content shadow-lg"><div class="modal-header bg-warning text-dark"><h5 class="modal-title fw-bold">Edit Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <form action="http://127.0.0.1:5000/edit_purchase" method="POST">
+        <div class="modal-body"><input type="hidden" name="id" id="edit_pur_id"><p class="text-muted small">Editing parameters will update stock values dynamically.</p>
+        <div class="row">
+            <div class="col-md-6 mb-3"><label>Correct Qty</label><input type="number" class="form-control" name="quantity" id="edit_pur_qty" required min="1" onkeyup="calcTotalInvoice('edit_pur_qty', 'edit_pur_unit', 'edit_pur_total')"></div>
+            <div class="col-md-6 mb-3"><label>Item Value / Unit Cost (₹)</label><input type="number" step="0.01" class="form-control" id="edit_pur_unit" required onkeyup="calcTotalInvoice('edit_pur_qty', 'edit_pur_unit', 'edit_pur_total')"></div>
+        </div>
+        <div class="mb-3"><label>Calculated Total Invoice Cost (₹)</label><input type="number" step="0.01" class="form-control bg-light text-success fw-bold" name="total_cost" id="edit_pur_total" readonly placeholder="0.00"></div>
+        </div><div class="modal-footer"><button type="submit" class="btn btn-warning fw-bold w-100">Update Purchase</button></div></form></div></div></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function openEditPurchase(id, qty, unitCost) { 
+            document.getElementById('edit_pur_id').value = id; 
+            document.getElementById('edit_pur_qty').value = qty; 
+            document.getElementById('edit_pur_unit').value = unitCost; 
+            calcTotalInvoice('edit_pur_qty', 'edit_pur_unit', 'edit_pur_total'); 
+            new bootstrap.Modal(document.getElementById('editPurchaseModal')).show(); 
+        }
+        
+        function calcTotalInvoice(qtyId, unitId, totalId) {
+            let qty = parseFloat(document.getElementById(qtyId).value);
+            let unit = parseFloat(document.getElementById(unitId).value);
+            let totalField = document.getElementById(totalId);
+            
+            if (qty > 0 && unit >= 0) {
+                totalField.value = (qty * unit).toFixed(2);
+            } else {
+                totalField.value = "0.00";
+            }
+        }
+
+        function sortTable(colIndex, tableId) {
+            const table = document.getElementById(tableId); const tbody = table.tBodies[0]; const rows = Array.from(tbody.rows);
+            const isAsc = table.getAttribute('data-sort-dir') === 'asc'; table.setAttribute('data-sort-dir', isAsc ? 'desc' : 'asc');
+            rows.sort((a, b) => {
+                let valA = a.cells[colIndex].innerText.trim().replace(/[^0-9.-]+/g,""); let valB = b.cells[colIndex].innerText.trim().replace(/[^0-9.-]+/g,"");
+                if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) { return isAsc ? parseFloat(valA) - parseFloat(valB) : parseFloat(valB) - parseFloat(valA); }
+                let textA = a.cells[colIndex].innerText.trim().toLowerCase(); let textB = b.cells[colIndex].innerText.trim().toLowerCase();
+                return isAsc ? textA.localeCompare(textB) : textB.localeCompare(textA);
+            });
+            rows.forEach(row => tbody.appendChild(row));
+        }
+    </script>
+</body>
+</html>

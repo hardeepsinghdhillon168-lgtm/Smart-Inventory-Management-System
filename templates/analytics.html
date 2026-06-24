@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Analytics - Smart Inventory</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+<style>
+        body {
+            background: linear-gradient(rgba(240, 242, 245, 0.85), rgba(240, 242, 245, 0.95)), 
+                        url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=1920&auto=format&fit=crop') no-repeat center center fixed;
+            background-size: cover;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow mb-4">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/dashboard">Smart Inventory</a>
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/products">Products</a>
+                <a class="nav-link" href="/sales">Sales</a>
+                <a class="nav-link active" href="/analytics">ML Analytics</a>
+            </div>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-info text-dark me-3">Role: {{ role }}</span>
+                <a href="/logout" class="btn btn-outline-light btn-sm">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h2 class="mb-4">AI & Demand Forecasting</h2>
+
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card border-primary shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">🧠 Scikit-Learn Prediction Engine</h5>
+                    </div>
+                    <div class="card-body">
+                        <h4 class="text-primary">Predicted 7-Day Demand: <strong>{{ next_week_demand }} Units</strong></h4>
+                        <p class="card-text text-muted">{{ prediction_msg }}</p>
+                        <p class="small text-secondary mb-0"><em>*Model used: Multiple Linear Regression (sklearn.linear_model) based on historical daily transaction volumes.</em></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-12">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Historical Sales Trend</h5>
+                        <canvas id="salesChart" height="100"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('salesChart').getContext('2d');
+        
+        // Data passed from Python Backend
+        const labels = JSON.parse('{{ chart_labels | safe }}');
+        const dataPoints = JSON.parse('{{ chart_data | safe }}');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Units Sold',
+                    data: dataPoints,
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3 // Makes the line curved
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>
