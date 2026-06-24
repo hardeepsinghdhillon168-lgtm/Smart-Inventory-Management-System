@@ -15,7 +15,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 
-# Database Connection
 def get_db_connection():
     return mysql.connector.connect(
         host="sql12.freesqldatabase.com",
