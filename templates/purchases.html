@@ -77,7 +77,7 @@
     </div>
 
     <div class="modal fade" id="addPurchaseModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header bg-success text-white"><h5 class="modal-title fw-bold">Record Inbound Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <form action="http://127.0.0.1:5000/purchases" method="POST">
+        <form action="/purchases" method="POST">
         <div class="modal-body"><div class="mb-3"><label>Select Supplier</label><select class="form-select" name="supplier_id" required>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.company }}</option>{% endfor %}</select></div><div class="mb-3"><label>Select Product</label><select class="form-select" name="product_id" required>{% for prod in products %}<option value="{{ prod.id }}">{{ prod.name }}</option>{% endfor %}</select></div>
         <div class="row">
             <div class="col-md-6 mb-3"><label>Qty Received</label><input type="number" class="form-control" name="quantity" id="add_qty" required min="1" onkeyup="calcTotalInvoice('add_qty', 'add_unit', 'add_total')"></div>
@@ -87,7 +87,7 @@
         </div><div class="modal-footer"><button type="submit" class="btn btn-success fw-bold w-100">Confirm Purchase</button></div></form></div></div></div>
 
     <div class="modal fade" id="editPurchaseModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content shadow-lg"><div class="modal-header bg-warning text-dark"><h5 class="modal-title fw-bold">Edit Purchase</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-        <form action="http://127.0.0.1:5000/edit_purchase" method="POST">
+        <form action="/edit_purchase" method="POST">
         <div class="modal-body"><input type="hidden" name="id" id="edit_pur_id"><p class="text-muted small">Editing parameters will update stock values dynamically.</p>
         <div class="row">
             <div class="col-md-6 mb-3"><label>Correct Qty</label><input type="number" class="form-control" name="quantity" id="edit_pur_qty" required min="1" onkeyup="calcTotalInvoice('edit_pur_qty', 'edit_pur_unit', 'edit_pur_total')"></div>
